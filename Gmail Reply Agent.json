@@ -1,0 +1,264 @@
+{
+  "name": "Gmail Reply Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -496,
+        -16
+      ],
+      "id": "561d5262-bbc7-4ff8-a867-a5c6c88b57c0",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7BuR3nYNJpK6NH3W",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        -16
+      ],
+      "id": "28eaf5a9-c1df-4a34-8ac7-8dd6329f77c2",
+      "name": "Get a message",
+      "webhookId": "d242306a-59f3-4fb2-b110-41bc1a25e067",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7BuR3nYNJpK6NH3W",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You would act as email responding agent for me\n\nBelow is the content of mail-\nsubject-  {{ $json.Subject }}\nbody- {{ $json.snippet}}\n\nI want you to do 2 things:\ni) classify the given mail into label.Use the tool to get all the labels and their id and mention both of them properly.\n\nthe labels are :1) course material \n                2) doubts                                 3) sponership\nii) draft a response from my side so that i can reply with subject and body\n\nMake sure the reply is respectful and give example wherever required to explain the answer to user. Give reply in HTML format so its easy to read \nWhen calling tools:\n- Use correct JSON\n- Use boolean true/false\n- Do NOT use strings for boolean values\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -64,
+        -16
+      ],
+      "id": "40cf6416-02b3-4c83-9599-ac61061592b7",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"label\":\"label\",\n  \"label_id\":\"123456\",\n  \"subject\":\"doubt_answer\",\n  \"body\":\"Hey there ! here is your reply which answers your doubt\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        224
+      ],
+      "id": "ca1cad51-ea06-48d5-ae84-1d2646f2d1dc",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        16,
+        272
+      ],
+      "id": "39d87aeb-951d-4898-a62d-d52d0b5c6b16",
+      "name": "Get many labels in Gmail",
+      "webhookId": "7298afd9-d540-402f-8220-c2f0593cd1a0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7BuR3nYNJpK6NH3W",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        192
+      ],
+      "id": "f1a83fb3-b9fc-4fcb-88f7-36bf511c1cc7",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "OxT2gp3GMaErNLkj",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json.output.subject }}",
+        "message": "={{ $json.output.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        -16
+      ],
+      "id": "0f6def3d-9375-46c8-af2e-615bc4d05032",
+      "name": "Create a draft",
+      "webhookId": "12c0c43b-3ddd-405b-9478-858a64214af3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7BuR3nYNJpK6NH3W",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get a message').item.json.From }}",
+        "subject": "={{ $('AI Agent1').item.json.output.subject }}",
+        "message": "={{ $('AI Agent1').item.json.output.body }}",
+        "options": {
+          "senderName": "={{ $('Get a message').item.json.From }}",
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        -16
+      ],
+      "id": "e575f884-9995-4137-b4ba-6717fa9cde5a",
+      "name": "Send a message",
+      "webhookId": "37a4f5fa-905a-4d6b-8a0f-eb098babd6d7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7BuR3nYNJpK6NH3W",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many labels in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a draft": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "feb7564d-a2c1-4d5b-a4f8-a37d0e3d2de1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fe6893bb0a4c4faf53e848a2347d8650011613d919757e9a7624b22336f45f86"
+  },
+  "id": "Hjy1RjxYM5qZSPXXB5IaX",
+  "tags": []
+}
